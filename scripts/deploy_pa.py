@@ -152,10 +152,13 @@ else:
 
 # 2. Installer dépendances
 print()
-print(">> [2/8] Installation des dépendances (3-5 min, sois patient)...")
-sh(f"{VENV_PATH}/bin/pip install --quiet --upgrade pip")
-sh(f"{VENV_PATH}/bin/pip install --quiet -r {PROJECT_PATH}/requirements.txt")
-print("  OK")
+print(">> [2/8] Installation des dépendances (3-5 min, beaucoup de lignes vont défiler)...")
+print("   N'APPUIE PAS Ctrl+C même si c'est long — laisse aller jusqu'au bout.")
+print()
+sh(f"{VENV_PATH}/bin/pip install --upgrade pip 2>&1 | tail -3")
+sh(f"{VENV_PATH}/bin/pip install -r {PROJECT_PATH}/requirements.txt")
+print()
+print("  Installation terminée.")
 
 # 3. Dossier data
 print()
