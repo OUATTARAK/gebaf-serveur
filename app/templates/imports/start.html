@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Importer des fichiers{% endblock %}
+{% block topbar %}Importer{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="h3">Importer des fichiers</h1>
+    <div class="subtitle">Charge un Excel, un CSV ou un PDF — le logiciel extrait les infos et te propose une revue avant validation.</div>
+  </div>
+  <div>
+    {% if has_anthropic %}
+    <span class="badge bg-success"><i class="bi bi-stars"></i> Extraction IA activée (Claude)</span>
+    {% else %}
+    <span class="badge bg-secondary" title="Définis ANTHROPIC_API_KEY pour l'extraction IA"><i class="bi bi-cpu"></i> Extraction locale uniquement</span>
+    {% endif %}
+  </div>
+</div>
+
+<form method="post" action="/imports/new" enctype="multipart/form-data" id="imp-form">
+  <div class="row g-3 mb-3">
+
+    <div class="col-md-6">
+      <label class="form-label fw-semibold">1. Type d'import</label>
+      <div class="row g-2">
+        <div class="col-12">
+          <label class="card p-3 d-flex flex-row gap-3 align-items-center" style="cursor:pointer">
+            <input type="radio" name="kind" value="depense_facture" class="form-check-input" required>
+            <i class="bi bi-receipt-cutoff" style="font-size:26px;color:var(--info)"></i>
+            <div>
+              <div class="fw-semibold">Facture fournisseur (PDF, image)</div>
+              <div class="small text-muted">Extrait fournisseur, date, montants, TVA → crée une dépense pré-remplie</div>
+            </div>
+          </label>
+        </div>
+        <div class="col-12">
+          <label class="card p-3 d-flex flex-row gap-3 align-items-center" style="cursor:pointer">
+            <input type="radio" name="kind" value="devis_lines" class="form-check-input">
+            <i class="bi bi-table" style="font-size:26px;color:var(--success)"></i>
+            <div>
+              <div class="fw-semibold">Lignes de devis (Excel, CSV)</div>
+              <div class="small text-muted">Crée un nouveau devis avec toutes les lignes extraites</div>
+            </div>
+          </label>
+        </div>
+        <div class="col-12">
+          <label class="card p-3 d-flex flex-row gap-3 align-items-center" style="cursor:pointer">
+            <input type="radio" name="kind" value="chantiers" class="form-check-input">
+            <i class="bi bi-building-up" style="font-size:26px;color:var(--warning)"></i>
+            <div>
+              <div class="fw-semibold">Liste de chantiers (Excel, CSV)</div>
+              <div class="small text-muted">Importer plusieurs chantiers d'un coup — colonnes : nom, client, adresse, début, fin, budget, statut</div>
+            </div>
+          </label>
+        </div>
+        <div class="col-12">
+          <label class="card p-3 d-flex flex-row gap-3 align-items-center" style="cursor:pointer">
+            <input type="radio" name="kind" value="clients" class="form-check-input">
+            <i class="bi bi-people" style="font-size:26px;color:var(--accent-hover)"></i>
+            <div>
+              <div class="fw-semibold">Liste de clients (Excel, CSV)</div>
+              <div class="small text-muted">Colonnes : nom, type, email, téléphone, adresse, SIRET</div>
+            </div>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label fw-semibold">2. Fichier</label>
+      <div class="card">
+        <div class="card-body">
+          <div class="mb-3">
+            <input type="file" class="form-control" name="file" id="file" required
+                   accept=".pdf,.xlsx,.xlsm,.csv,.png,.jpg,.jpeg">
+            <div class="form-text">Formats : PDF, Excel (.xlsx), CSV, images (JPG/PNG)</div>
+          </div>
+
+          <div id="depense-extras" style="display:none">
+            <label class="form-label">Chantier à imputer (optionnel)</label>
+            <select class="form-select" name="chantier_id">
+              <option value="">— Sélectionner après extraction —</option>
+              {% for c in chantiers %}<option value="{{ c.id }}">{{ c.reference }} — {{ c.name }}</option>{% endfor %}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <div class="alert alert-info mt-3 small">
+        <i class="bi bi-info-circle"></i>
+        <strong>Conseils :</strong>
+        <ul class="mb-0 mt-1">
+          <li>Pour Excel : la 1<sup>ère</sup> ligne doit contenir les en-têtes (description, qte, pu, etc.).</li>
+          <li>Pour PDF : assure-toi qu'il est en texte (pas un scan), sinon active l'IA.</li>
+          <li>Tu pourras <strong>vérifier et corriger</strong> chaque champ avant validation.</li>
+        </ul>
+      </div>
+
+      <button class="btn btn-accent w-100" type="submit">
+        <i class="bi bi-upload"></i> Analyser le fichier
+      </button>
+    </div>
+  </div>
+</form>
+
+<script>
+document.querySelectorAll('input[name="kind"]').forEach(r => {
+  r.addEventListener('change', () => {
+    document.getElementById('depense-extras').style.display = r.value === 'depense_facture' && r.checked ? 'block' : 'none';
+    // surligner la card
+    document.querySelectorAll('input[name="kind"]').forEach(rr => {
+      rr.closest('.card').style.border = rr.checked ? '2px solid var(--accent)' : '1px solid var(--border)';
+    });
+  });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ client.name }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3">{{ client.name }} <span class="badge bg-secondary">{{ client.type | status_label }}</span></h1>
+  <div class="btn-group">
+    {% if user.role.value in ("admin", "manager") %}
+    <a class="btn btn-outline-primary btn-sm" href="/clients/{{ client.id }}/edit"><i class="bi bi-pencil"></i> Modifier</a>
+    <form method="post" action="/clients/{{ client.id }}/delete" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button class="btn btn-outline-danger btn-sm"><i class="bi bi-trash"></i></button></form>
+    {% endif %}
+  </div>
+</div>
+<div class="row g-3">
+  <div class="col-md-5">
+    <div class="card"><div class="card-body">
+      <dl class="row mb-0">
+        <dt class="col-sm-4">Email</dt><dd class="col-sm-8">{{ client.email or '—' }}</dd>
+        <dt class="col-sm-4">Téléphone</dt><dd class="col-sm-8">{{ client.phone or '—' }}</dd>
+        <dt class="col-sm-4">SIRET</dt><dd class="col-sm-8">{{ client.siret or '—' }}</dd>
+        <dt class="col-sm-4">Adresse</dt><dd class="col-sm-8" style="white-space:pre-line">{{ client.address or '—' }}</dd>
+        <dt class="col-sm-4">Notes</dt><dd class="col-sm-8" style="white-space:pre-line">{{ client.notes or '—' }}</dd>
+      </dl>
+    </div></div>
+  </div>
+  <div class="col-md-7">
+    <div class="card"><div class="card-header">Chantiers</div>
+      <ul class="list-group list-group-flush">
+        {% for c in client.chantiers %}
+        <li class="list-group-item d-flex justify-content-between">
+          <a href="/chantiers/{{ c.id }}" class="text-decoration-none">{{ c.reference }} — {{ c.name }}</a>
+          <span class="badge bg-{{ c.status | status_badge }}">{{ c.status | status_label }}</span>
+        </li>
+        {% else %}<li class="list-group-item text-muted">Aucun chantier</li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

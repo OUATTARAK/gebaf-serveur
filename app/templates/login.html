@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Connexion · Chantiers{% endblock %}
+{% block content_anon %}
+<div class="login-shell">
+  <div class="login-side">
+    <span class="brand-mark">{{ crane_svg | safe }}</span>
+    <h1>Pilotez vos chantiers,<br>simplement.</h1>
+    <p>Une plateforme unique pour suivre vos opérations BTP : devis, factures, dépenses, planning, équipes et marges — en temps réel.</p>
+    <div class="login-features">
+      <div class="login-feature"><i class="bi bi-check-circle-fill"></i> Devis et factures professionnels en PDF</div>
+      <div class="login-feature"><i class="bi bi-check-circle-fill"></i> Suivi de marge par chantier en direct</div>
+      <div class="login-feature"><i class="bi bi-check-circle-fill"></i> Planning et heures de l'équipe centralisés</div>
+      <div class="login-feature"><i class="bi bi-check-circle-fill"></i> Photos, plans et documents au même endroit</div>
+    </div>
+  </div>
+  <div class="login-form-side">
+    <div class="login-form-card">
+      <h2 class="h4 mb-1">Bienvenue</h2>
+      <p class="text-muted mb-4">Connectez-vous à votre espace.</p>
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <form method="post" action="/login">
+        <input type="hidden" name="next" value="{{ next }}">
+        <div class="mb-3">
+          <label class="form-label">Adresse email</label>
+          <input type="email" class="form-control" name="email" required autofocus placeholder="vous@entreprise.com">
+        </div>
+        <div class="mb-4">
+          <label class="form-label">Mot de passe</label>
+          <input type="password" class="form-control" name="password" required placeholder="••••••••">
+        </div>
+        <button class="btn btn-accent w-100" type="submit"><i class="bi bi-box-arrow-in-right me-1"></i> Se connecter</button>
+      </form>
+      <p class="text-muted text-center mt-4 small">© Suivi de chantiers</p>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if depense else "Nouvelle" }} dépense{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{{ "Modifier la dépense" if depense else "Nouvelle dépense" }}</h1>
+<form method="post" enctype="multipart/form-data" class="card card-body" action="{{ '/depenses/' ~ depense.id ~ '/edit' if depense else '/depenses/new' }}">
+  <div class="row g-3">
+    <div class="col-md-6"><label class="form-label">Chantier *</label>
+      <select class="form-select" name="chantier_id" required>
+        <option value="">— Sélectionner —</option>
+        {% for c in chantiers %}<option value="{{ c.id }}"
+          {% if depense and depense.chantier_id == c.id %}selected{% endif %}
+          {% if not depense and selected_chantier == c.id %}selected{% endif %}>{{ c.reference }} — {{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">Date</label><input type="date" class="form-control" name="date_val" required value="{{ depense.date.isoformat() if depense else '' }}"></div>
+    <div class="col-md-3"><label class="form-label">Catégorie</label>
+      <select class="form-select" name="category">
+        {% for cat in categories %}<option value="{{ cat.value }}" {% if depense and depense.category == cat %}selected{% endif %}>{{ cat.value | status_label }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-12"><label class="form-label">Description *</label><input class="form-control" name="description" required value="{{ depense.description if depense else '' }}"></div>
+
+    <div class="col-md-6"><label class="form-label">Fournisseur / artisan</label>
+      <select class="form-select" name="supplier_id">
+        <option value="">— Aucun —</option>
+        {% for s in suppliers %}<option value="{{ s.id }}" {% if depense and depense.supplier_id == s.id %}selected{% endif %}>{{ s.name }}{% if s.company %} ({{ s.company }}){% endif %}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">Quantité</label><input class="form-control" name="quantity" value="{{ depense.quantity if depense else 1 }}"></div>
+    <div class="col-md-3"><label class="form-label">Unité</label><input class="form-control" name="unit" value="{{ depense.unit if depense else '' }}"></div>
+
+    <div class="col-md-4"><label class="form-label">Montant HT (F CFA) *</label><input class="form-control" name="amount_ht" inputmode="decimal" required value="{{ depense.amount_ht if depense else 0 }}"></div>
+    <div class="col-md-4"><label class="form-label">TVA (%)</label><input class="form-control" name="tva_rate" inputmode="decimal" value="{{ depense.tva_rate if depense else 20 }}"></div>
+    <div class="col-md-4"><label class="form-label">Justificatif (facture/ticket)</label>
+      <input type="file" class="form-control" name="receipt">
+      {% if depense and depense.receipt_path %}<div class="form-text"><a href="/depenses/{{ depense.id }}/receipt" target="_blank">Voir le justificatif actuel</a></div>{% endif %}
+    </div>
+  </div>
+  <div class="mt-3"><button class="btn btn-primary">Enregistrer</button>
+  <a class="btn btn-outline-secondary" href="/depenses">Annuler</a></div>
+</form>
+{% endblock %}

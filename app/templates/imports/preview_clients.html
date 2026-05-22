@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Prévisualisation clients · Import{% endblock %}
+{% block topbar %}Prévisualisation import{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="h3">Clients détectés</h1>
+    <div class="subtitle">{{ payload.data.rows | length }} client(s) extrait(s) depuis <code>{{ payload.original_name }}</code></div>
+  </div>
+</div>
+
+{% for w in payload.warnings %}<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>{% endfor %}
+
+<form method="post" action="/imports/confirm/{{ token }}/clients">
+  <div class="alert alert-info"><i class="bi bi-info-circle"></i> Les doublons (clients ayant le même nom) seront ignorés automatiquement.</div>
+
+  <div class="card mb-3">
+    <div class="card-header"><span><i class="bi bi-list-ul"></i> Aperçu</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAll()"><i class="bi bi-check-all"></i> Tout (dé)cocher</button>
+    </div>
+    <div class="table-responsive">
+    <table class="table table-sm">
+      <thead><tr><th style="width:30px"><input type="checkbox" id="check-all" checked onchange="toggleAll()"></th>
+        <th>Nom</th><th>Type</th><th>Email</th><th>Téléphone</th><th>Adresse</th><th>SIRET</th></tr></thead>
+      <tbody>
+      {% for r in payload.data.rows %}
+        <tr>
+          <td><input type="checkbox" name="row_keep" value="{{ loop.index0 }}" checked class="row-check"></td>
+          <td class="fw-semibold">{{ r.name }}</td>
+          <td><span class="badge bg-secondary">{{ r.type_raw or 'particulier' }}</span></td>
+          <td>{{ r.email or '—' }}</td>
+          <td>{{ r.phone or '—' }}</td>
+          <td class="text-truncate" style="max-width:200px">{{ r.address or '—' }}</td>
+          <td>{{ r.siret or '—' }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7"><div class="empty-state"><i class="bi bi-x-circle"></i>Aucun client détecté</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-accent" type="submit" {% if not payload.data.rows %}disabled{% endif %}><i class="bi bi-check-lg"></i> Importer les clients cochés</button>
+    <a class="btn btn-outline-secondary" href="/imports/new">Annuler</a>
+  </div>
+</form>
+
+<script>
+function toggleAll() {
+  const cb = document.getElementById('check-all');
+  document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+}
+</script>
+{% endblock %}

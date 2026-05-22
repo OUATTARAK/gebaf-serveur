@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Prévisualisation devis · Import{% endblock %}
+{% block topbar %}Prévisualisation import{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="h3">Lignes de devis détectées</h1>
+    <div class="subtitle">{{ payload.data['items'] | length }} ligne(s) extraite(s) depuis <code>{{ payload.original_name }}</code></div>
+  </div>
+</div>
+
+{% for w in payload.warnings %}<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>{% endfor %}
+
+<form method="post" action="/imports/confirm/{{ token }}/devis_lines">
+  <div class="card mb-3"><div class="card-body row g-3">
+    <div class="col-md-6"><label class="form-label">Chantier *</label>
+      <select class="form-select" name="chantier_id" required>
+        <option value="">— Sélectionner —</option>
+        {% for c in chantiers %}<option value="{{ c.id }}">{{ c.reference }} — {{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">TVA (%)</label><input class="form-control" name="tva_rate" value="20"></div>
+    <div class="col-md-3 d-flex align-items-end"><button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="toggleAll()"><i class="bi bi-check-all"></i> Tout (dé)cocher</button></div>
+    <div class="col-12"><label class="form-label">Notes</label><textarea class="form-control" name="notes" rows="2"></textarea></div>
+  </div></div>
+
+  <div class="card mb-3">
+    <div class="card-header"><span><i class="bi bi-list-ul"></i> Lignes</span>
+      <span class="small text-muted">Décoche les lignes à ignorer · les valeurs sont modifiables</span>
+    </div>
+    <div class="table-responsive">
+    <table class="table">
+      <thead><tr><th style="width:40px"><input type="checkbox" id="check-all" checked onchange="toggleAll()"></th>
+        <th>Désignation</th><th style="width:90px">Qté</th><th style="width:90px">Unité</th><th style="width:130px">PU HT</th><th class="text-end" style="width:130px">Total HT</th></tr></thead>
+      <tbody>
+      {% for it in payload.data['items'] %}
+        <tr class="item-row">
+          <td><input type="checkbox" name="item_keep" value="{{ loop.index0 }}" checked class="item-check"></td>
+          <td><textarea class="form-control form-control-sm" name="item_description" rows="2">{{ it.description }}</textarea></td>
+          <td><input class="form-control form-control-sm item-qty" name="item_quantity" value="{{ '%g' % it.quantity }}"></td>
+          <td><input class="form-control form-control-sm" name="item_unit" value="{{ it.unit }}"></td>
+          <td><input class="form-control form-control-sm item-pu" name="item_unit_price" value="{{ it.unit_price_ht }}"></td>
+          <td class="text-end fw-semibold item-total">{{ (it.quantity * it.unit_price_ht) | euro }}</td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6"><div class="empty-state"><i class="bi bi-x-circle"></i>Aucune ligne détectée dans le fichier</div></td></tr>
+      {% endfor %}
+      </tbody>
+      <tfoot><tr><td colspan="5" class="text-end fw-bold">Total HT</td><td class="text-end fw-bold" id="grand-total">0 F CFA</td></tr></tfoot>
+    </table>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-accent" type="submit"><i class="bi bi-check-lg"></i> Créer le devis</button>
+    <a class="btn btn-outline-secondary" href="/imports/new">Annuler</a>
+  </div>
+</form>
+
+<script>
+function fmtMoney(v) { const n = Math.round(v||0); return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g,' ') + ' F CFA'; }
+function recompute() {
+  let total = 0;
+  document.querySelectorAll('.item-row').forEach(row => {
+    const checked = row.querySelector('.item-check').checked;
+    const q = parseFloat((row.querySelector('.item-qty').value||'0').replace(',', '.'))||0;
+    const p = parseFloat((row.querySelector('.item-pu').value||'0').replace(',', '.'))||0;
+    const t = q*p;
+    row.querySelector('.item-total').textContent = fmtMoney(t);
+    row.style.opacity = checked ? 1 : 0.45;
+    if (checked) total += t;
+  });
+  document.getElementById('grand-total').textContent = fmtMoney(total);
+}
+function toggleAll() {
+  const cb = document.getElementById('check-all');
+  document.querySelectorAll('.item-check').forEach(c => c.checked = cb.checked);
+  recompute();
+}
+document.querySelectorAll('.item-qty,.item-pu,.item-check').forEach(i => i.addEventListener('input', recompute));
+document.querySelectorAll('.item-check').forEach(i => i.addEventListener('change', recompute));
+recompute();
+</script>
+{% endblock %}

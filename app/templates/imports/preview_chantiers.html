@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Prévisualisation chantiers · Import{% endblock %}
+{% block topbar %}Prévisualisation import{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="h3">Chantiers détectés</h1>
+    <div class="subtitle">{{ payload.data.rows | length }} chantier(s) extrait(s) depuis <code>{{ payload.original_name }}</code></div>
+  </div>
+</div>
+
+{% for w in payload.warnings %}<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>{% endfor %}
+
+<form method="post" action="/imports/confirm/{{ token }}/chantiers">
+  <div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> Les clients inexistants seront créés automatiquement. Les références vides recevront une numérotation auto (CH{{ "2026" }}-XXXX).
+  </div>
+
+  <div class="card mb-3">
+    <div class="card-header"><span><i class="bi bi-list-ul"></i> Aperçu</span>
+      <button type="button" class="btn btn-sm btn-outline-secondary" onclick="toggleAll()"><i class="bi bi-check-all"></i> Tout (dé)cocher</button>
+    </div>
+    <div class="table-responsive">
+    <table class="table table-sm">
+      <thead><tr><th style="width:30px"><input type="checkbox" id="check-all" checked onchange="toggleAll()"></th>
+        <th>Réf.</th><th>Nom</th><th>Client</th><th>Adresse</th><th>Début</th><th>Fin</th><th class="text-end">Budget</th><th>Statut</th></tr></thead>
+      <tbody>
+      {% for r in payload.data.rows %}
+        <tr>
+          <td><input type="checkbox" name="row_keep" value="{{ loop.index0 }}" checked class="row-check"></td>
+          <td>{{ r.reference or '(auto)' }}</td>
+          <td class="fw-semibold">{{ r.name }}</td>
+          <td>{{ r.client_name or '—' }}</td>
+          <td class="text-truncate" style="max-width:200px">{{ r.address or '—' }}</td>
+          <td>{{ r.start_date | fr_date if r.start_date else '—' }}</td>
+          <td>{{ r.end_date | fr_date if r.end_date else '—' }}</td>
+          <td class="text-end">{{ r.budget_ht | euro }}</td>
+          <td><span class="badge bg-secondary">{{ r.status_raw or 'prospect' }}</span></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="9"><div class="empty-state"><i class="bi bi-x-circle"></i>Aucun chantier détecté</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <div class="d-flex gap-2">
+    <button class="btn btn-accent" type="submit" {% if not payload.data.rows %}disabled{% endif %}><i class="bi bi-check-lg"></i> Importer les chantiers cochés</button>
+    <a class="btn btn-outline-secondary" href="/imports/new">Annuler</a>
+  </div>
+</form>
+
+<script>
+function toggleAll() {
+  const cb = document.getElementById('check-all');
+  document.querySelectorAll('.row-check').forEach(c => c.checked = cb.checked);
+}
+</script>
+{% endblock %}

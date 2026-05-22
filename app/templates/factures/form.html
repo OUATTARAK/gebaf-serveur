@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier facture " + facture.number if facture else "Nouvelle facture" }}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{{ "Modifier facture " + facture.number if facture else "Nouvelle facture" }}</h1>
+<form method="post" action="{{ '/factures/' ~ facture.id ~ '/edit' if facture else '/factures/new' }}">
+  <div class="card mb-3"><div class="card-body row g-3">
+    <div class="col-md-3"><label class="form-label">N°</label><input class="form-control" name="number" value="{{ facture.number if facture else next_number }}" {% if facture %}readonly{% endif %}></div>
+    <div class="col-md-3"><label class="form-label">Date</label><input type="date" class="form-control" name="date" value="{{ facture.date.isoformat() if facture else '' }}"></div>
+    <div class="col-md-3"><label class="form-label">Échéance</label><input type="date" class="form-control" name="due_date" value="{{ facture.due_date.isoformat() if facture and facture.due_date else default_due }}"></div>
+    <div class="col-md-3"><label class="form-label">Statut</label>
+      <select class="form-select" name="status">
+        {% for s in statuses %}<option value="{{ s.value }}" {% if facture and facture.status == s %}selected{% endif %}>{{ s.value | status_label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-9"><label class="form-label">Chantier *</label>
+      <select class="form-select" name="chantier_id" required>
+        <option value="">— Sélectionner —</option>
+        {% for c in chantiers %}
+        <option value="{{ c.id }}" {% if facture and facture.chantier_id == c.id %}selected{% endif %}{% if not facture and selected_chantier == c.id %}selected{% endif %}>{{ c.reference }} — {{ c.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3"><label class="form-label">TVA (%)</label><input class="form-control" name="tva_rate" value="{{ facture.tva_rate if facture else 20 }}"></div>
+  </div></div>
+
+  <div class="card mb-3">
+    <div class="card-header d-flex justify-content-between"><span>Lignes</span>
+      <button type="button" class="btn btn-sm btn-outline-primary" onclick="addLine()"><i class="bi bi-plus-lg"></i> Ajouter une ligne</button>
+    </div>
+    <div class="table-responsive"><table class="table mb-0 align-middle">
+      <thead><tr><th style="width:50%">Désignation</th><th>Qté</th><th>Unité</th><th>PU HT</th><th class="text-end">Total HT</th><th></th></tr></thead>
+      <tbody id="items-body">
+      {% if facture %}
+        {% for it in facture.items %}
+        <tr class="item-row">
+          <td><textarea class="form-control" name="item_description" rows="2">{{ it.description }}</textarea></td>
+          <td><input class="form-control item-qty" name="item_quantity" value="{{ it.quantity }}"></td>
+          <td><input class="form-control" name="item_unit" value="{{ it.unit }}" style="width:80px"></td>
+          <td><input class="form-control item-pu" name="item_unit_price" value="{{ it.unit_price_ht }}"></td>
+          <td class="text-end item-total">{{ it.total_ht | euro }}</td>
+          <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove();recompute()"><i class="bi bi-x"></i></button></td>
+        </tr>
+        {% endfor %}
+      {% endif %}
+      </tbody>
+      <tfoot><tr><td colspan="4" class="text-end fw-bold">Total HT</td><td class="text-end fw-bold" id="total-ht">0 F CFA</td><td></td></tr></tfoot>
+    </table></div>
+  </div>
+
+  <div class="card mb-3"><div class="card-body">
+    <label class="form-label">Notes</label>
+    <textarea class="form-control" name="notes" rows="3">{{ facture.notes if facture else '' }}</textarea>
+  </div></div>
+
+  <button class="btn btn-primary">Enregistrer</button>
+  <a class="btn btn-outline-secondary" href="{{ '/factures/' ~ facture.id if facture else '/factures' }}">Annuler</a>
+</form>
+
+<script>
+function addLine() {
+  const tbody = document.getElementById('items-body');
+  const tr = document.createElement('tr'); tr.className = 'item-row';
+  tr.innerHTML = `
+    <td><textarea class="form-control" name="item_description" rows="2"></textarea></td>
+    <td><input class="form-control item-qty" name="item_quantity" value="1"></td>
+    <td><input class="form-control" name="item_unit" value="u" style="width:80px"></td>
+    <td><input class="form-control item-pu" name="item_unit_price" value="0"></td>
+    <td class="text-end item-total">0 F CFA</td>
+    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove();recompute()"><i class="bi bi-x"></i></button></td>`;
+  tbody.appendChild(tr); bindInputs(tr);
+}
+function fmtMoney(v) {
+  const n = Math.round(v || 0);
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' F CFA';
+}
+function recompute() {
+  let total = 0;
+  document.querySelectorAll('.item-row').forEach(row => {
+    const q = parseFloat((row.querySelector('.item-qty').value||'0').replace(',', '.'))||0;
+    const p = parseFloat((row.querySelector('.item-pu').value||'0').replace(',', '.'))||0;
+    const t = q*p; row.querySelector('.item-total').textContent = fmtMoney(t); total += t;
+  });
+  document.getElementById('total-ht').textContent = fmtMoney(total);
+}
+function bindInputs(scope){(scope||document).querySelectorAll('.item-qty,.item-pu').forEach(i=>i.addEventListener('input', recompute));}
+bindInputs(); recompute();
+if (!document.querySelectorAll('.item-row').length) addLine();
+</script>
+{% endblock %}

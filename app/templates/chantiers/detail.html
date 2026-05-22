@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+{% block title %}{{ chantier.reference }} · {{ chantier.name }}{% endblock %}
+{% block topbar %}{{ chantier.reference }}{% endblock %}
+{% block content %}
+
+<div class="card mb-3" style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#fff;border:0">
+  <div class="card-body" style="padding:24px 26px">
+    <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1" style="opacity:.7;font-size:12px;font-weight:600;letter-spacing:.05em;text-transform:uppercase">
+          <i class="bi bi-tag"></i> {{ chantier.reference }}
+        </div>
+        <h1 class="mb-2" style="color:#fff;font-size:26px;font-weight:700">{{ chantier.name }}</h1>
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+          <span class="badge bg-{{ chantier.status | status_badge }}">{{ chantier.status | status_label }}</span>
+          {% if chantier.client %}
+          <a href="/clients/{{ chantier.client.id }}" style="color:#fbbf24;text-decoration:none;font-size:14px"><i class="bi bi-person-circle"></i> {{ chantier.client.name }}</a>
+          {% endif %}
+          {% if chantier.address %}
+          <span style="color:rgba(255,255,255,0.7);font-size:13.5px"><i class="bi bi-geo-alt"></i> {{ chantier.address.splitlines()[0] }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div class="d-flex gap-2">
+        {% if user.role.value in ("admin", "manager") %}
+        <a class="btn btn-accent btn-sm" href="/chantiers/{{ chantier.id }}/edit"><i class="bi bi-pencil"></i> Modifier</a>
+        <form method="post" action="/chantiers/{{ chantier.id }}/delete" onsubmit="return confirm('Supprimer ce chantier et toutes ses données associées ?')" class="d-inline">
+          <button class="btn btn-outline-danger btn-sm" style="background:rgba(255,255,255,0.05);border-color:rgba(252,165,165,0.3);color:#fca5a5"><i class="bi bi-trash"></i></button>
+        </form>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi kpi-primary"><div class="kpi-accent-bar"></div>
+      <div class="kpi-icon"><i class="bi bi-receipt"></i></div>
+      <div class="kpi-label">CA facturé HT</div>
+      <div class="kpi-value">{{ marge.ca_facture_ht | euro }}</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi kpi-success"><div class="kpi-accent-bar"></div>
+      <div class="kpi-icon"><i class="bi bi-bank"></i></div>
+      <div class="kpi-label">Encaissé</div>
+      <div class="kpi-value">{{ marge.ca_paye | euro }}</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi kpi-danger"><div class="kpi-accent-bar"></div>
+      <div class="kpi-icon"><i class="bi bi-cash-stack"></i></div>
+      <div class="kpi-label">Dépenses HT</div>
+      <div class="kpi-value">{{ marge.depenses_ht | euro }}</div>
+    </div>
+  </div>
+  <div class="col-lg-3 col-md-6">
+    <div class="kpi {{ 'kpi-accent' if marge.marge_eur >= 0 else 'kpi-danger' }}"><div class="kpi-accent-bar"></div>
+      <div class="kpi-icon"><i class="bi bi-pie-chart-fill"></i></div>
+      <div class="kpi-label">Marge brute</div>
+      <div class="kpi-value">{{ marge.marge_eur | euro }}</div>
+      <div class="kpi-sub">{{ marge.marge_pct }} % du CA</div>
+    </div>
+  </div>
+</div>
+
+<ul class="nav nav-tabs" id="tabs">
+  <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#infos"><i class="bi bi-info-circle"></i> Infos</a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#devis"><i class="bi bi-file-earmark-text"></i> Devis <span class="badge bg-secondary ms-1">{{ chantier.devis | length }}</span></a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#factures"><i class="bi bi-receipt"></i> Factures <span class="badge bg-secondary ms-1">{{ chantier.factures | length }}</span></a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#depenses"><i class="bi bi-cash-coin"></i> Dépenses <span class="badge bg-secondary ms-1">{{ chantier.depenses | length }}</span></a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#documents"><i class="bi bi-images"></i> Documents <span class="badge bg-secondary ms-1">{{ chantier.documents | length }}</span></a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#planning"><i class="bi bi-calendar-event"></i> Planning <span class="badge bg-secondary ms-1">{{ chantier.interventions | length }}</span></a></li>
+  <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#heures"><i class="bi bi-stopwatch"></i> Heures <span class="badge bg-secondary ms-1">{{ chantier.heures | length }}</span></a></li>
+</ul>
+
+<div class="tab-content p-3">
+  <!-- INFOS -->
+  <div class="tab-pane fade show active" id="infos">
+    <div class="row g-3">
+      <div class="col-md-6">
+        <dl class="row mb-0">
+          <dt class="col-sm-4">Client</dt><dd class="col-sm-8">{{ chantier.client.name if chantier.client else '—' }}</dd>
+          <dt class="col-sm-4">Adresse</dt><dd class="col-sm-8" style="white-space:pre-line">{{ chantier.address or '—' }}</dd>
+          <dt class="col-sm-4">Début</dt><dd class="col-sm-8">{{ chantier.start_date | fr_date }}</dd>
+          <dt class="col-sm-4">Fin prévue</dt><dd class="col-sm-8">{{ chantier.end_date | fr_date }}</dd>
+          <dt class="col-sm-4">Budget HT</dt><dd class="col-sm-8 fw-semibold">{{ chantier.budget_ht | euro }}</dd>
+        </dl>
+      </div>
+      <div class="col-md-6">
+        <h6 class="text-muted small text-uppercase">Description</h6>
+        <div style="white-space:pre-line">{{ chantier.description or 'Aucune description' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DEVIS -->
+  <div class="tab-pane fade" id="devis">
+    <div class="mb-3 text-end">
+      {% if user.role.value in ("admin", "manager") %}
+      <a class="btn btn-accent btn-sm" href="/devis/new?chantier_id={{ chantier.id }}"><i class="bi bi-plus-lg"></i> Nouveau devis</a>
+      {% endif %}
+    </div>
+    <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>N°</th><th>Date</th><th>Validité</th><th class="text-end">Total HT</th><th class="text-end">TTC</th><th>Statut</th><th></th></tr></thead>
+      <tbody>
+      {% for d in chantier.devis %}
+        <tr style="cursor:pointer" onclick="window.location='/devis/{{ d.id }}'">
+          <td class="fw-semibold">{{ d.number }}</td>
+          <td>{{ d.date | fr_date }}</td>
+          <td>{{ d.validity_date | fr_date }}</td>
+          <td class="text-end">{{ d.total_ht | euro }}</td>
+          <td class="text-end fw-semibold">{{ d.total_ttc | euro }}</td>
+          <td><span class="badge bg-{{ d.status | status_badge }}">{{ d.status | status_label }}</span></td>
+          <td onclick="event.stopPropagation()"><a class="btn btn-sm btn-outline-secondary" href="/devis/{{ d.id }}/pdf" target="_blank"><i class="bi bi-file-pdf"></i></a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7"><div class="empty-state"><i class="bi bi-file-earmark-text"></i>Aucun devis pour ce chantier</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- FACTURES -->
+  <div class="tab-pane fade" id="factures">
+    <div class="mb-3 text-end">
+      {% if user.role.value in ("admin", "manager", "accountant") %}
+      <a class="btn btn-accent btn-sm" href="/factures/new?chantier_id={{ chantier.id }}"><i class="bi bi-plus-lg"></i> Nouvelle facture</a>
+      {% endif %}
+    </div>
+    <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>N°</th><th>Date</th><th>Échéance</th><th class="text-end">Total TTC</th><th class="text-end">Payé</th><th class="text-end">Reste</th><th>Statut</th><th></th></tr></thead>
+      <tbody>
+      {% for f in chantier.factures %}
+        <tr style="cursor:pointer" onclick="window.location='/factures/{{ f.id }}'">
+          <td class="fw-semibold">{{ f.number }}</td>
+          <td>{{ f.date | fr_date }}</td>
+          <td>{{ f.due_date | fr_date }}</td>
+          <td class="text-end">{{ f.total_ttc | euro }}</td>
+          <td class="text-end text-success">{{ f.paid_amount | euro }}</td>
+          <td class="text-end fw-semibold">{{ f.reste_a_payer | euro }}</td>
+          <td><span class="badge bg-{{ f.status | status_badge }}">{{ f.status | status_label }}</span></td>
+          <td onclick="event.stopPropagation()"><a class="btn btn-sm btn-outline-secondary" href="/factures/{{ f.id }}/pdf" target="_blank"><i class="bi bi-file-pdf"></i></a></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8"><div class="empty-state"><i class="bi bi-receipt"></i>Aucune facture pour ce chantier</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- DEPENSES -->
+  <div class="tab-pane fade" id="depenses">
+    <div class="mb-3 text-end">
+      <a class="btn btn-accent btn-sm" href="/depenses/new?chantier_id={{ chantier.id }}"><i class="bi bi-plus-lg"></i> Nouvelle dépense</a>
+    </div>
+    <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>Date</th><th>Catégorie</th><th>Description</th><th>Fournisseur</th><th class="text-end">HT</th><th class="text-end">TTC</th><th></th></tr></thead>
+      <tbody>
+      {% for d in chantier.depenses %}
+        <tr>
+          <td>{{ d.date | fr_date }}</td>
+          <td><span class="badge bg-secondary">{{ d.category | status_label }}</span></td>
+          <td>{{ d.description }}</td>
+          <td>{{ d.supplier.name if d.supplier else '—' }}</td>
+          <td class="text-end">{{ d.amount_ht | euro }}</td>
+          <td class="text-end fw-semibold">{{ d.amount_ttc | euro }}</td>
+          <td>
+            {% if d.receipt_path %}<a href="/depenses/{{ d.id }}/receipt" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="bi bi-paperclip"></i></a>{% endif %}
+            <a class="btn btn-sm btn-outline-secondary" href="/depenses/{{ d.id }}/edit"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="/depenses/{{ d.id }}/delete" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="7"><div class="empty-state"><i class="bi bi-cash-coin"></i>Aucune dépense enregistrée</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- DOCUMENTS -->
+  <div class="tab-pane fade" id="documents">
+    <form method="post" action="/chantiers/{{ chantier.id }}/documents/new" enctype="multipart/form-data" class="row g-2 mb-3 align-items-end">
+      <div class="col-md-3">
+        <label class="form-label">Type</label>
+        <select class="form-select form-select-sm" name="doc_type">
+          <option value="photo_chantier">Photo chantier</option>
+          <option value="photo_avant">Photo avant</option>
+          <option value="photo_apres">Photo après</option>
+          <option value="plan">Plan</option>
+          <option value="contrat">Contrat</option>
+          <option value="attestation">Attestation</option>
+          <option value="facture_recue">Facture reçue</option>
+          <option value="autre">Autre</option>
+        </select>
+      </div>
+      <div class="col-md-4"><label class="form-label">Description</label><input class="form-control form-control-sm" name="description" placeholder="Optionnel"></div>
+      <div class="col-md-3"><label class="form-label">Fichiers</label><input type="file" class="form-control form-control-sm" name="files" multiple required></div>
+      <div class="col-md-2"><button class="btn btn-accent btn-sm w-100"><i class="bi bi-cloud-upload"></i> Uploader</button></div>
+    </form>
+    <div class="row g-2">
+      {% for d in chantier.documents %}
+      <div class="col-md-3 col-sm-4 col-6">
+        <div class="card h-100" style="overflow:hidden">
+          {% if d.mime_type and d.mime_type.startswith('image/') %}
+            <a href="#" class="photo-thumb" data-src="/documents/{{ d.id }}" data-name="{{ d.original_name }}" style="display:block;height:150px;overflow:hidden">
+              <img src="/documents/{{ d.id }}" style="width:100%;height:100%;object-fit:cover;transition:transform .25s" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform=''">
+            </a>
+          {% else %}
+            <a href="/documents/{{ d.id }}" target="_blank" class="d-flex align-items-center justify-content-center" style="height:150px;background:var(--surface-2);text-decoration:none">
+              <i class="bi bi-file-earmark-text" style="font-size:42px;color:var(--text-muted)"></i>
+            </a>
+          {% endif %}
+          <div class="card-body p-2">
+            <div class="small fw-semibold text-truncate" title="{{ d.original_name }}">{{ d.original_name }}</div>
+            <div class="d-flex justify-content-between align-items-center mt-1">
+              <span class="badge bg-secondary">{{ d.doc_type | status_label }}</span>
+              <div class="d-flex gap-1">
+                <a href="/documents/{{ d.id }}" target="_blank" class="btn btn-sm btn-outline-secondary" title="Télécharger"><i class="bi bi-download"></i></a>
+                <form method="post" action="/documents/{{ d.id }}/delete" onsubmit="return confirm('Supprimer ce document ?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {% else %}
+      <div class="col-12"><div class="empty-state"><i class="bi bi-images"></i>Aucun document ni photo. Uploadez votre premier fichier ci-dessus.</div></div>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- PLANNING -->
+  <div class="tab-pane fade" id="planning">
+    <div class="mb-3 text-end">
+      {% if user.role.value in ("admin", "manager") %}
+      <a class="btn btn-accent btn-sm" href="/interventions/new?chantier_id={{ chantier.id }}"><i class="bi bi-plus-lg"></i> Planifier</a>
+      {% endif %}
+    </div>
+    <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>Titre</th><th>Début</th><th>Fin</th><th>Assigné</th><th>Statut</th><th></th></tr></thead>
+      <tbody>
+      {% for iv in chantier.interventions %}
+        <tr>
+          <td class="fw-semibold">{{ iv.title }}</td>
+          <td>{{ iv.start_dt | fr_date }}</td>
+          <td>{{ iv.end_dt | fr_date }}</td>
+          <td>{{ iv.assignee.full_name if iv.assignee else (iv.contact.name if iv.contact else '—') }}</td>
+          <td><span class="badge bg-{{ iv.status | status_badge }}">{{ iv.status | status_label }}</span></td>
+          <td>
+            <a class="btn btn-sm btn-outline-secondary" href="/interventions/{{ iv.id }}/edit"><i class="bi bi-pencil"></i></a>
+            <form method="post" action="/interventions/{{ iv.id }}/delete" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6"><div class="empty-state"><i class="bi bi-calendar"></i>Aucune intervention planifiée</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+
+  <!-- HEURES -->
+  <div class="tab-pane fade" id="heures">
+    <div class="mb-3 text-end">
+      <a class="btn btn-accent btn-sm" href="/heures/new?chantier_id={{ chantier.id }}"><i class="bi bi-plus-lg"></i> Saisir des heures</a>
+    </div>
+    <div class="table-responsive">
+    <table class="table table-hover">
+      <thead><tr><th>Date</th><th>Personne</th><th class="text-end">Heures</th><th>Description</th><th class="text-end">Coût</th><th></th></tr></thead>
+      <tbody>
+      {% for h in chantier.heures %}
+        <tr>
+          <td>{{ h.date | fr_date }}</td>
+          <td>
+            <div class="d-flex align-items-center gap-2">
+              <span class="user-avatar" style="width:24px;height:24px;font-size:10px">{{ h.user.full_name[0] | upper }}</span>
+              {{ h.user.full_name }}
+            </div>
+          </td>
+          <td class="text-end fw-semibold">{{ '%g' % h.hours }} h</td>
+          <td class="text-muted">{{ h.description or '' }}</td>
+          <td class="text-end">{{ (h.hours * (h.hourly_rate or 0)) | euro }}</td>
+          <td>
+            <form method="post" action="/heures/{{ h.id }}/delete" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+          </td>
+        </tr>
+      {% else %}
+        <tr><td colspan="6"><div class="empty-state"><i class="bi bi-stopwatch"></i>Aucune heure saisie</div></td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </div>
+</div>
+
+<!-- Lightbox photos -->
+<div id="lightbox" onclick="closeLightbox()" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(15,23,42,0.92);z-index:9999;align-items:center;justify-content:center;flex-direction:column;padding:20px;cursor:zoom-out">
+  <div style="position:absolute;top:20px;right:20px;color:#fff;font-size:30px;cursor:pointer">&times;</div>
+  <img id="lightbox-img" src="" style="max-width:95vw;max-height:85vh;border-radius:8px;box-shadow:0 20px 60px rgba(0,0,0,0.5)">
+  <div id="lightbox-caption" style="color:#fff;margin-top:14px;font-size:14px;opacity:0.9"></div>
+</div>
+
+<script>
+document.querySelectorAll('.photo-thumb').forEach(el => {
+  el.addEventListener('click', (e) => {
+    e.preventDefault();
+    const lb = document.getElementById('lightbox');
+    document.getElementById('lightbox-img').src = el.dataset.src;
+    document.getElementById('lightbox-caption').textContent = el.dataset.name;
+    lb.style.display = 'flex';
+  });
+});
+function closeLightbox() { document.getElementById('lightbox').style.display = 'none'; }
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeLightbox(); });
+// Onglet via hash
+if (location.hash) {
+  const tab = document.querySelector(`a[href="${location.hash}"]`);
+  if (tab) new bootstrap.Tab(tab).show();
+}
+</script>
+{% endblock %}

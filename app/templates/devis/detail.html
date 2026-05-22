@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Devis {{ devis.number }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Devis {{ devis.number }}</h1>
+    <div>
+      <span class="badge bg-{{ devis.status | status_badge }}">{{ devis.status | status_label }}</span>
+      <a href="/chantiers/{{ devis.chantier_id }}" class="ms-2 text-decoration-none">{{ devis.chantier.reference }} — {{ devis.chantier.name }}</a>
+    </div>
+  </div>
+  <div>
+    <a class="btn btn-outline-secondary" href="/devis/{{ devis.id }}/pdf" target="_blank"><i class="bi bi-file-pdf"></i> PDF</a>
+    {% if user.role.value in ("admin", "manager") %}
+    <a class="btn btn-outline-primary" href="/devis/{{ devis.id }}/edit"><i class="bi bi-pencil"></i> Modifier</a>
+    {% endif %}
+    {% if user.role.value in ("admin", "manager", "accountant") and devis.status.value == "accepte" and not devis.facture %}
+    <form method="post" action="/devis/{{ devis.id }}/to-facture" class="d-inline"><button class="btn btn-success"><i class="bi bi-receipt"></i> Générer la facture</button></form>
+    {% endif %}
+    {% if user.role.value in ("admin", "manager") %}
+    <form method="post" action="/devis/{{ devis.id }}/delete" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+    {% endif %}
+  </div>
+</div>
+
+{% if user.role.value in ("admin", "manager") %}
+<div class="mb-3">
+  <form method="post" action="/devis/{{ devis.id }}/status" class="d-flex gap-2 align-items-center">
+    <label class="small">Changer le statut :</label>
+    <select class="form-select form-select-sm" name="status" style="width:auto">
+      <option value="brouillon" {% if devis.status.value == "brouillon" %}selected{% endif %}>Brouillon</option>
+      <option value="envoye" {% if devis.status.value == "envoye" %}selected{% endif %}>Envoyé</option>
+      <option value="accepte" {% if devis.status.value == "accepte" %}selected{% endif %}>Accepté</option>
+      <option value="refuse" {% if devis.status.value == "refuse" %}selected{% endif %}>Refusé</option>
+      <option value="expire" {% if devis.status.value == "expire" %}selected{% endif %}>Expiré</option>
+    </select>
+    <button class="btn btn-sm btn-primary">Appliquer</button>
+  </form>
+</div>
+{% endif %}
+
+<div class="card mb-3"><div class="card-body row">
+  <div class="col-md-3"><div class="small text-muted">Date</div><div>{{ devis.date | fr_date }}</div></div>
+  <div class="col-md-3"><div class="small text-muted">Validité</div><div>{{ devis.validity_date | fr_date }}</div></div>
+  <div class="col-md-3"><div class="small text-muted">Total HT</div><div class="h5 mb-0">{{ devis.total_ht | euro }}</div></div>
+  <div class="col-md-3"><div class="small text-muted">Total TTC ({{ devis.tva_rate }} %)</div><div class="h5 mb-0">{{ devis.total_ttc | euro }}</div></div>
+</div></div>
+
+<div class="card mb-3"><div class="table-responsive">
+  <table class="table mb-0">
+    <thead class="table-light"><tr><th>Désignation</th><th>Qté</th><th>Unité</th><th class="text-end">PU HT</th><th class="text-end">Total HT</th></tr></thead>
+    <tbody>
+    {% for it in devis.items %}
+      <tr><td style="white-space:pre-line">{{ it.description }}</td><td>{{ '%g' % it.quantity }}</td><td>{{ it.unit }}</td>
+        <td class="text-end">{{ it.unit_price_ht | euro }}</td><td class="text-end">{{ it.total_ht | euro }}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div></div>
+
+{% if devis.notes %}
+<div class="card"><div class="card-body"><h6>Notes</h6><div style="white-space:pre-line">{{ devis.notes }}</div></div></div>
+{% endif %}
+
+{% if devis.facture %}
+<div class="alert alert-info mt-3"><i class="bi bi-receipt"></i> Une facture a été générée : <a href="/factures/{{ devis.facture.id }}">{{ devis.facture.number }}</a></div>
+{% endif %}
+{% endblock %}

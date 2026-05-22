@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Rapports · {{ year }}{% endblock %}
+{% block topbar %}Rapports{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="h3">Analyse {{ year }}</h1>
+    <div class="subtitle">Vue d'ensemble financière et opérationnelle.</div>
+  </div>
+  <form class="d-flex gap-2" method="get">
+    <select class="form-select" name="year" onchange="this.form.submit()">
+      {% for y in years_avail %}<option value="{{ y }}" {% if y == year %}selected{% endif %}>Année {{ y }}</option>{% endfor %}
+    </select>
+  </form>
+</div>
+
+<div class="row g-3 mb-4">
+  <div class="col-xl-3 col-md-6">
+    <div class="kpi kpi-primary"><div class="kpi-accent-bar"></div>
+      <div class="kpi-icon"><i class="bi bi-graph-up-arrow"></i></div>
+      <div class="kpi-label">CA HT annuel</div>
+      <div class="kpi-value">{{ ca_annee | euro }}</div>
+      <div class="kpi-sub">12 mois cumulés</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kpi kpi-success"><div class="kpi-accent-bar"></div>
+      <div class="kpi-icon"><i class="bi bi-bank"></i></div>
+      <div class="kpi-label">Encaissé</div>
+      <div class="kpi-value">{{ enc_annee | euro }}</div>
+      <div class="kpi-sub">Paiements perçus</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kpi kpi-danger"><div class="kpi-accent-bar"></div>
+      <div class="kpi-icon"><i class="bi bi-cash-stack"></i></div>
+      <div class="kpi-label">Dépenses HT</div>
+      <div class="kpi-value">{{ dep_annee | euro }}</div>
+      <div class="kpi-sub">Achats, sous-traitance, etc.</div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="kpi kpi-accent"><div class="kpi-accent-bar"></div>
+      <div class="kpi-icon"><i class="bi bi-pie-chart-fill"></i></div>
+      <div class="kpi-label">Marge brute</div>
+      <div class="kpi-value">{{ marge_annee | euro }}</div>
+      <div class="kpi-sub">{{ '%.1f' % marge_pct }} % du CA</div>
+    </div>
+  </div>
+</div>
+
+<div class="card mb-4">
+  <div class="card-header"><span><i class="bi bi-bar-chart"></i> Évolution mensuelle</span></div>
+  <div class="card-body"><canvas id="chart-ca" height="90"></canvas></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><span><i class="bi bi-building"></i> Marge par chantier</span>
+        <span class="small text-muted">Top 20</span>
+      </div>
+      <div class="table-responsive">
+        <table class="table table-hover">
+          <thead><tr><th>Chantier</th><th class="text-end">CA</th><th class="text-end">Dépenses</th><th class="text-end">Marge</th><th class="text-end">%</th></tr></thead>
+          <tbody>
+          {% for r in chantier_marges %}
+            <tr>
+              <td><a href="/chantiers/{{ r.chantier.id }}" class="fw-semibold text-decoration-none">{{ r.chantier.reference }}</a><div class="small text-muted text-truncate" style="max-width:280px">{{ r.chantier.name }}</div></td>
+              <td class="text-end">{{ r.ca_facture_ht | euro }}</td>
+              <td class="text-end text-muted">{{ r.depenses_ht | euro }}</td>
+              <td class="text-end fw-semibold {{ 'text-success' if r.marge_eur >= 0 else 'text-danger' }}">{{ r.marge_eur | euro }}</td>
+              <td class="text-end"><span class="badge bg-{{ 'success' if r.marge_pct >= 20 else ('warning' if r.marge_pct >= 0 else 'danger') }}">{{ r.marge_pct }} %</span></td>
+            </tr>
+          {% else %}<tr><td colspan="5"><div class="empty-state"><i class="bi bi-bar-chart"></i>Aucune donnée pour {{ year }}</div></td></tr>{% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="card mb-3">
+      <div class="card-header"><span><i class="bi bi-shop"></i> Top fournisseurs</span></div>
+      <ul class="list-group list-group-flush">
+        {% for r in top_supplier_rows %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <span class="user-avatar" style="background:linear-gradient(135deg,#475569,#334155);width:28px;height:28px;font-size:11px">{{ (r.supplier.name[0] if r.supplier else '?') | upper }}</span>
+            <span>{{ r.supplier.name if r.supplier else '—' }}</span>
+          </div>
+          <span class="fw-semibold">{{ r.total | euro }}</span>
+        </li>
+        {% else %}<li class="list-group-item"><div class="empty-state py-3"><i class="bi bi-shop"></i>Aucune dépense fournisseur</div></li>{% endfor %}
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-header"><span><i class="bi bi-people"></i> Heures par personne</span></div>
+      <ul class="list-group list-group-flush">
+        {% for n, t in heures_par_user %}
+        <li class="list-group-item d-flex justify-content-between align-items-center">
+          <div class="d-flex align-items-center gap-2">
+            <span class="user-avatar" style="width:28px;height:28px;font-size:11px">{{ n[0] | upper }}</span>
+            <span>{{ n }}</span>
+          </div>
+          <span class="fw-semibold">{{ '%g' % t }} h</span>
+        </li>
+        {% else %}<li class="list-group-item"><div class="empty-state py-3"><i class="bi bi-clock"></i>Aucune saisie d'heures</div></li>{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const ctx = document.getElementById('chart-ca');
+const gridColor = 'rgba(15,23,42,0.06)';
+const textColor = '#64748b';
+// Gradients
+const c = ctx.getContext('2d');
+function gradient(color1, color2) {
+  const g = c.createLinearGradient(0, 0, 0, 280);
+  g.addColorStop(0, color1); g.addColorStop(1, color2);
+  return g;
+}
+new Chart(ctx, {
+  type: 'bar',
+  data: {
+    labels: ['Jan','Fév','Mar','Avr','Mai','Juin','Juil','Août','Sept','Oct','Nov','Déc'],
+    datasets: [
+      { label: 'CA HT', data: {{ ca_par_mois | tojson }},
+        backgroundColor: gradient('rgba(29,78,216,0.85)','rgba(29,78,216,0.45)'),
+        borderRadius: 6, borderSkipped: false },
+      { label: 'Encaissé', data: {{ enc_par_mois | tojson }},
+        backgroundColor: gradient('rgba(5,150,105,0.85)','rgba(5,150,105,0.45)'),
+        borderRadius: 6, borderSkipped: false },
+      { label: 'Dépenses', data: {{ dep_par_mois | tojson }},
+        backgroundColor: gradient('rgba(185,28,28,0.85)','rgba(185,28,28,0.45)'),
+        borderRadius: 6, borderSkipped: false },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: {
+      legend: { position: 'bottom', labels: { color: textColor, font: { size: 12, family: 'Inter' }, usePointStyle: true, padding: 16, boxWidth: 8 } },
+      tooltip: {
+        backgroundColor: '#0f172a', titleColor: '#fff', bodyColor: '#cbd5e1',
+        padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4,
+        callbacks: {
+          label: (c) => c.dataset.label + ': ' + Math.round(c.raw).toLocaleString('fr-FR').replace(/,/g,' ') + ' F CFA'
+        }
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: textColor, font: { family: 'Inter' } } },
+      y: { grid: { color: gridColor, drawBorder: false }, ticks: { color: textColor, font: { family: 'Inter' },
+        callback: (v) => (v >= 1000 ? (v/1000) + 'k' : v) } }
+    }
+  }
+});
+</script>
+{% endblock %}

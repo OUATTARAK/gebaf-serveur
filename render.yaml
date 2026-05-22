@@ -1,0 +1,36 @@
+# Blueprint Render — crée web service + Postgres + persistent disk en 1 clic
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: chantiers
+    runtime: python
+    plan: starter      # 7 USD/mois — required pour disque persistant et pas de mise en veille
+    region: frankfurt  # ou oregon, virginia, singapore — au plus proche
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 2"
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.0
+      - key: CHANTIER_SECRET
+        generateValue: true     # secret session auto-généré
+      - key: CHANTIER_DATA_DIR
+        value: /var/data        # dossier monté sur le disque persistant
+      - key: CHANTIER_UPLOAD_DIR
+        value: /var/data/uploads
+      - key: DATABASE_URL
+        fromDatabase:
+          name: chantiers-db
+          property: connectionString
+      - key: ANTHROPIC_API_KEY
+        sync: false             # à renseigner dans le dashboard Render (secret)
+    disk:
+      name: chantier-storage
+      mountPath: /var/data
+      sizeGB: 5                 # photos, justificatifs, PDF — 5 Go suffisent au début
+
+databases:
+  - name: chantiers-db
+    plan: starter               # 7 USD/mois Postgres avec 1 Go
+    databaseName: chantiers
+    user: chantiers

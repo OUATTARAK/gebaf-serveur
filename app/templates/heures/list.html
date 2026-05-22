@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Heures travaillées{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3"><i class="bi bi-clock-history"></i> Heures travaillées</h1>
+  <a class="btn btn-primary" href="/heures/new"><i class="bi bi-plus-lg"></i> Saisir des heures</a>
+</div>
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-2"><input type="date" name="start" class="form-control" value="{{ start }}"></div>
+  <div class="col-md-2"><input type="date" name="end" class="form-control" value="{{ end }}"></div>
+  {% if user.role.value not in ("worker", "viewer") %}
+  <div class="col-md-3"><select class="form-select" name="user_id">
+    <option value="">Toutes personnes</option>
+    {% for u in users %}<option value="{{ u.id }}" {% if filter_user_id == u.id %}selected{% endif %}>{{ u.full_name }}</option>{% endfor %}
+  </select></div>
+  {% endif %}
+  <div class="col-md-3"><select class="form-select" name="chantier_id">
+    <option value="">Tous chantiers</option>
+    {% for c in chantiers %}<option value="{{ c.id }}" {% if filter_chantier_id == c.id %}selected{% endif %}>{{ c.reference }} — {{ c.name }}</option>{% endfor %}
+  </select></div>
+  <div class="col-md-2"><button class="btn btn-outline-secondary w-100">Filtrer</button></div>
+</form>
+
+<div class="row g-2 mb-2">
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Total heures</div><div class="h5 mb-0">{{ '%g' % total }} h</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Coût total</div><div class="h5 mb-0">{{ cout | euro }}</div></div></div></div>
+</div>
+
+<div class="card"><div class="table-responsive">
+  <table class="table table-hover mb-0">
+    <thead class="table-light"><tr><th>Date</th><th>Personne</th><th>Chantier</th><th class="text-end">Heures</th><th>Description</th><th class="text-end">Tarif</th><th class="text-end">Coût</th><th></th></tr></thead>
+    <tbody>
+    {% for h in heures %}
+      <tr>
+        <td>{{ h.date | fr_date }}</td>
+        <td>{{ h.user.full_name }}</td>
+        <td><a href="/chantiers/{{ h.chantier_id }}" class="text-decoration-none">{{ h.chantier.reference }}</a></td>
+        <td class="text-end">{{ '%g' % h.hours }} h</td>
+        <td>{{ h.description or '' }}</td>
+        <td class="text-end">{{ h.hourly_rate | euro if h.hourly_rate else '—' }}</td>
+        <td class="text-end">{{ (h.hours * (h.hourly_rate or 0)) | euro }}</td>
+        <td>
+          <form method="post" action="/heures/{{ h.id }}/delete" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+        </td>
+      </tr>
+    {% else %}<tr><td colspan="8" class="text-center text-muted py-4">Aucune saisie</td></tr>{% endfor %}
+    </tbody>
+  </table>
+</div></div>
+{% endblock %}

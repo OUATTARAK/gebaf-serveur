@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Chantiers · Chantiers{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3"><i class="bi bi-building"></i> Chantiers</h1>
+  {% if user.role.value in ("admin", "manager") %}
+  <a class="btn btn-primary" href="/chantiers/new"><i class="bi bi-plus-lg"></i> Nouveau chantier</a>
+  {% endif %}
+</div>
+
+<form class="row g-2 mb-3" method="get">
+  <div class="col-md-6"><input class="form-control" name="q" placeholder="Recherche (nom, réf, adresse, client...)" value="{{ q }}"></div>
+  <div class="col-md-4">
+    <select class="form-select" name="statut">
+      <option value="">Tous les statuts</option>
+      {% for s in statuses %}
+      <option value="{{ s.value }}" {% if statut == s.value %}selected{% endif %}>{{ s.value | status_label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-2"><button class="btn btn-outline-secondary w-100">Filtrer</button></div>
+</form>
+
+<div class="card">
+  <div class="table-responsive">
+    <table class="table table-hover mb-0 align-middle">
+      <thead class="table-light"><tr>
+        <th>Référence</th><th>Nom</th><th>Client</th><th>Adresse</th>
+        <th>Début</th><th>Fin prévue</th><th class="text-end">Budget HT</th><th>Statut</th>
+      </tr></thead>
+      <tbody>
+      {% for c in chantiers %}
+        <tr style="cursor:pointer" onclick="window.location='/chantiers/{{ c.id }}'">
+          <td class="fw-semibold">{{ c.reference }}</td>
+          <td>{{ c.name }}</td>
+          <td>{{ c.client.name if c.client else '—' }}</td>
+          <td class="text-truncate" style="max-width:240px">{{ c.address or '—' }}</td>
+          <td>{{ c.start_date | fr_date }}</td>
+          <td>{{ c.end_date | fr_date }}</td>
+          <td class="text-end">{{ c.budget_ht | euro }}</td>
+          <td><span class="badge bg-{{ c.status | status_badge }}">{{ c.status | status_label }}</span></td>
+        </tr>
+      {% else %}
+        <tr><td colspan="8" class="text-center text-muted py-4">Aucun chantier trouvé</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

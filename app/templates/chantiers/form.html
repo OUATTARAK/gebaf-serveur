@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if chantier else "Nouveau" }} chantier{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{{ "Modifier le chantier " + chantier.reference if chantier else "Nouveau chantier" }}</h1>
+
+<form method="post" class="card card-body" action="{{ '/chantiers/' ~ chantier.id ~ '/edit' if chantier else '/chantiers/new' }}">
+  <div class="row g-3">
+    <div class="col-md-3">
+      <label class="form-label">Référence</label>
+      <input class="form-control" name="reference" value="{{ chantier.reference if chantier else next_ref }}" {% if chantier %}readonly{% endif %}>
+    </div>
+    <div class="col-md-6">
+      <label class="form-label">Nom du chantier *</label>
+      <input class="form-control" name="name" required value="{{ chantier.name if chantier else '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Statut</label>
+      <select class="form-select" name="status">
+        {% for s in statuses %}
+        <option value="{{ s.value }}" {% if chantier and chantier.status == s %}selected{% endif %}>{{ s.value | status_label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-6">
+      <label class="form-label">Client</label>
+      <select class="form-select" name="client_id">
+        <option value="">— Aucun —</option>
+        {% for cl in clients %}
+        <option value="{{ cl.id }}" {% if chantier and chantier.client_id == cl.id %}selected{% endif %}>{{ cl.name }}</option>
+        {% endfor %}
+      </select>
+      <div class="form-text"><a href="/clients/new">+ Créer un client</a></div>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Date de début</label>
+      <input type="date" class="form-control" name="start_date" value="{{ chantier.start_date.isoformat() if chantier and chantier.start_date else '' }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Date de fin prévue</label>
+      <input type="date" class="form-control" name="end_date" value="{{ chantier.end_date.isoformat() if chantier and chantier.end_date else '' }}">
+    </div>
+
+    <div class="col-md-3">
+      <label class="form-label">Budget HT (F CFA)</label>
+      <input class="form-control" name="budget_ht" inputmode="decimal" value="{{ chantier.budget_ht if chantier else 0 }}">
+    </div>
+    <div class="col-md-9">
+      <label class="form-label">Adresse du chantier</label>
+      <textarea class="form-control" name="address" rows="2">{{ chantier.address if chantier else '' }}</textarea>
+    </div>
+    <div class="col-12">
+      <label class="form-label">Description / commentaires</label>
+      <textarea class="form-control" name="description" rows="3">{{ chantier.description if chantier else '' }}</textarea>
+    </div>
+  </div>
+  <div class="mt-3 d-flex gap-2">
+    <button class="btn btn-primary" type="submit"><i class="bi bi-check-lg"></i> Enregistrer</button>
+    <a class="btn btn-outline-secondary" href="{{ '/chantiers/' ~ chantier.id if chantier else '/chantiers' }}">Annuler</a>
+  </div>
+</form>
+{% endblock %}

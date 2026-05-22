@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Facture extraite · Import{% endblock %}
+{% block topbar %}Prévisualisation import{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="h3">Facture fournisseur extraite</h1>
+    <div class="subtitle">Vérifie les informations ci-dessous avant de créer la dépense.</div>
+  </div>
+  <div>
+    {% if payload.data.source == 'llm' %}
+    <span class="badge bg-success"><i class="bi bi-stars"></i> Extraction IA (Claude)</span>
+    {% else %}
+    <span class="badge bg-info"><i class="bi bi-cpu"></i> Extraction locale</span>
+    {% endif %}
+  </div>
+</div>
+
+{% for w in payload.warnings %}<div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> {{ w }}</div>{% endfor %}
+
+<form method="post" action="/imports/confirm/{{ token }}/depense_facture">
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><span><i class="bi bi-receipt"></i> Informations de la facture</span></div>
+      <div class="card-body row g-3">
+        <div class="col-md-6">
+          <label class="form-label">Chantier à imputer *</label>
+          <select class="form-select" name="chantier_id" required>
+            <option value="">— Sélectionner —</option>
+            {% for c in chantiers %}<option value="{{ c.id }}" {% if payload.chantier_id == c.id %}selected{% endif %}>{{ c.reference }} — {{ c.name }}</option>{% endfor %}
+          </select>
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Date *</label>
+          <input type="date" class="form-control" name="date_val" required
+            value="{{ payload.data.date if payload.data.date else '' }}">
+        </div>
+        <div class="col-md-3">
+          <label class="form-label">Catégorie</label>
+          <select class="form-select" name="category">
+            <option value="materiaux" selected>Matériaux</option>
+            <option value="sous_traitance">Sous-traitance</option>
+            <option value="location">Location</option>
+            <option value="transport">Transport</option>
+            <option value="fournitures">Fournitures</option>
+            <option value="main_oeuvre">Main d'œuvre</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
+
+        <div class="col-md-12">
+          <label class="form-label">Fournisseur</label>
+          <div class="row g-2">
+            <div class="col-md-7">
+              <select class="form-select" name="supplier_id" id="supplier-select">
+                <option value="">— Choisir un fournisseur existant —</option>
+                {% for s in suppliers %}<option value="{{ s.id }}">{{ s.name }}{% if s.company %} ({{ s.company }}){% endif %}</option>{% endfor %}
+              </select>
+            </div>
+            <div class="col-md-5">
+              <input class="form-control" name="new_supplier_name"
+                placeholder="ou créer : nom du fournisseur"
+                value="{{ payload.data.supplier_name or '' }}">
+            </div>
+          </div>
+          <div class="form-text">Soit choisir un existant, soit taper un nom à créer ({{ '"' + (payload.data.supplier_name or '') + '"' if payload.data.supplier_name else 'aucun détecté' }}).</div>
+        </div>
+
+        <div class="col-md-12">
+          <label class="form-label">Description</label>
+          <input class="form-control" name="description"
+            value="{{ payload.data.description or ('Facture ' + (payload.data.invoice_number or '')) | trim }}">
+        </div>
+
+        <div class="col-md-4">
+          <label class="form-label">Montant HT *</label>
+          <div class="input-group">
+            <input class="form-control" name="amount_ht" inputmode="decimal" required id="amount-ht"
+              value="{{ '%.2f' % payload.data.amount_ht if payload.data.amount_ht else '' }}">
+            <span class="input-group-text">F CFA</span>
+          </div>
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">TVA (%)</label>
+          <input class="form-control" name="tva_rate" inputmode="decimal" id="tva-rate"
+            value="{{ payload.data.tva_rate if payload.data.tva_rate else 20 }}">
+        </div>
+        <div class="col-md-4">
+          <label class="form-label">Total TTC</label>
+          <div class="input-group">
+            <input class="form-control" id="amount-ttc" readonly
+              value="{{ '%.2f' % payload.data.amount_ttc if payload.data.amount_ttc else '' }}">
+            <span class="input-group-text">F CFA</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if payload.data.lines %}
+    <div class="card mt-3">
+      <div class="card-header"><span><i class="bi bi-list-ul"></i> Lignes extraites ({{ payload.data.lines | length }})</span>
+        <span class="small text-muted">À titre indicatif — non créées dans la dépense</span>
+      </div>
+      <div class="table-responsive">
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Désignation</th><th>Qté</th><th>Unité</th><th class="text-end">PU HT</th></tr></thead>
+        <tbody>
+        {% for l in payload.data.lines %}
+          <tr><td>{{ l.description }}</td><td>{{ l.quantity }}</td><td>{{ l.unit or '' }}</td><td class="text-end">{{ l.unit_price_ht | euro }}</td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if payload.data.raw_text_excerpt %}
+    <details class="mt-3">
+      <summary class="text-muted small" style="cursor:pointer">Voir le texte brut extrait du PDF</summary>
+      <pre class="small mt-2" style="background:var(--surface-2);padding:12px;border-radius:8px;max-height:240px;overflow:auto">{{ payload.data.raw_text_excerpt }}</pre>
+    </details>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><span><i class="bi bi-paperclip"></i> Justificatif joint</span></div>
+      <div class="card-body">
+        <p class="small text-muted mb-2"><code>{{ payload.original_name }}</code></p>
+        <p class="small">Le fichier sera attaché comme justificatif à la dépense.</p>
+      </div>
+    </div>
+
+    <div class="card mt-3">
+      <div class="card-header"><span><i class="bi bi-info-circle"></i> Récap</span></div>
+      <div class="card-body">
+        <dl class="row mb-0 small">
+          <dt class="col-5">N° facture</dt><dd class="col-7">{{ payload.data.invoice_number or '—' }}</dd>
+          <dt class="col-5">Date détectée</dt><dd class="col-7">{{ payload.data.date | fr_date if payload.data.date else '—' }}</dd>
+          <dt class="col-5">Fournisseur</dt><dd class="col-7">{{ payload.data.supplier_name or '—' }}</dd>
+          <dt class="col-5">Total HT</dt><dd class="col-7">{{ payload.data.amount_ht | euro }}</dd>
+          <dt class="col-5">TVA</dt><dd class="col-7">{{ payload.data.tva_rate }} %</dd>
+          <dt class="col-5">Total TTC</dt><dd class="col-7">{{ payload.data.amount_ttc | euro }}</dd>
+        </dl>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+      <button class="btn btn-accent flex-fill" type="submit"><i class="bi bi-check-lg"></i> Créer la dépense</button>
+      <a class="btn btn-outline-secondary" href="/imports/new">Annuler</a>
+    </div>
+  </div>
+</div>
+</form>
+
+<script>
+function recompute() {
+  const ht = parseFloat((document.getElementById('amount-ht').value || '0').replace(',', '.')) || 0;
+  const tva = parseFloat((document.getElementById('tva-rate').value || '0').replace(',', '.')) || 0;
+  document.getElementById('amount-ttc').value = (ht * (1 + tva/100)).toFixed(2);
+}
+document.getElementById('amount-ht').addEventListener('input', recompute);
+document.getElementById('tva-rate').addEventListener('input', recompute);
+// Si supplier_id choisi, vide le champ "new supplier"
+document.getElementById('supplier-select').addEventListener('change', (e) => {
+  if (e.target.value) document.querySelector('input[name="new_supplier_name"]').value = '';
+});
+recompute();
+</script>
+{% endblock %}

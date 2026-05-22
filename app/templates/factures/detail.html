@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Facture {{ facture.number }}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-start mb-3">
+  <div>
+    <h1 class="h3 mb-1">Facture {{ facture.number }}</h1>
+    <div>
+      <span class="badge bg-{{ facture.status | status_badge }}">{{ facture.status | status_label }}</span>
+      <a href="/chantiers/{{ facture.chantier_id }}" class="ms-2 text-decoration-none">{{ facture.chantier.reference }} — {{ facture.chantier.name }}</a>
+    </div>
+  </div>
+  <div>
+    <a class="btn btn-outline-secondary" href="/factures/{{ facture.id }}/pdf" target="_blank"><i class="bi bi-file-pdf"></i> PDF</a>
+    {% if user.role.value in ("admin", "manager", "accountant") %}
+    <a class="btn btn-outline-primary" href="/factures/{{ facture.id }}/edit"><i class="bi bi-pencil"></i> Modifier</a>
+    <form method="post" action="/factures/{{ facture.id }}/delete" class="d-inline" onsubmit="return confirm('Supprimer ?')"><button class="btn btn-outline-danger"><i class="bi bi-trash"></i></button></form>
+    {% endif %}
+  </div>
+</div>
+
+<div class="row g-3 mb-3">
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Total HT</div><div class="h5 mb-0">{{ facture.total_ht | euro }}</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Total TTC ({{ facture.tva_rate }} %)</div><div class="h5 mb-0">{{ facture.total_ttc | euro }}</div></div></div></div>
+  <div class="col-md-3"><div class="card"><div class="card-body"><div class="small text-muted">Payé</div><div class="h5 mb-0 text-success">{{ facture.paid_amount | euro }}</div></div></div></div>
+  <div class="col-md-3"><div class="card text-bg-{{ 'success' if facture.reste_a_payer <= 0 else 'warning' }}"><div class="card-body"><div class="small opacity-75">Reste</div><div class="h5 mb-0">{{ facture.reste_a_payer | euro }}</div></div></div></div>
+</div>
+
+<div class="row g-3">
+  <div class="col-lg-8">
+    <div class="card mb-3"><div class="card-header">Lignes</div>
+      <div class="table-responsive"><table class="table mb-0">
+        <thead class="table-light"><tr><th>Désignation</th><th>Qté</th><th>Unité</th><th class="text-end">PU HT</th><th class="text-end">Total HT</th></tr></thead>
+        <tbody>{% for it in facture.items %}
+          <tr><td style="white-space:pre-line">{{ it.description }}</td><td>{{ '%g' % it.quantity }}</td><td>{{ it.unit }}</td>
+            <td class="text-end">{{ it.unit_price_ht | euro }}</td><td class="text-end">{{ it.total_ht | euro }}</td></tr>
+        {% endfor %}</tbody>
+      </table></div>
+    </div>
+    {% if facture.notes %}
+    <div class="card"><div class="card-body"><h6>Notes</h6><div style="white-space:pre-line">{{ facture.notes }}</div></div></div>
+    {% endif %}
+  </div>
+
+  <div class="col-lg-4">
+    <div class="card mb-3"><div class="card-header">Paiements ({{ facture.paiements | length }})</div>
+      <ul class="list-group list-group-flush">
+        {% for p in facture.paiements %}
+        <li class="list-group-item">
+          <div class="d-flex justify-content-between">
+            <div>
+              <div class="fw-semibold">{{ p.amount | euro }}</div>
+              <div class="small text-muted">{{ p.date | fr_date }} · {{ p.method or '—' }}</div>
+              {% if p.reference %}<div class="small">Réf : {{ p.reference }}</div>{% endif %}
+            </div>
+            {% if user.role.value in ("admin", "manager", "accountant") %}
+            <form method="post" action="/paiements/{{ p.id }}/delete" onsubmit="return confirm('Supprimer ce paiement ?')"><button class="btn btn-sm btn-outline-danger"><i class="bi bi-x"></i></button></form>
+            {% endif %}
+          </div>
+        </li>
+        {% else %}<li class="list-group-item text-muted">Aucun paiement</li>{% endfor %}
+      </ul>
+      {% if user.role.value in ("admin", "manager", "accountant") and facture.reste_a_payer > 0.01 %}
+      <div class="card-body border-top">
+        <form method="post" action="/factures/{{ facture.id }}/paiements/new" class="row g-2">
+          <div class="col-6"><input type="date" name="date_val" class="form-control form-control-sm" value="{{ today|default('') }}" required></div>
+          <div class="col-6"><input name="amount" inputmode="decimal" class="form-control form-control-sm" placeholder="Montant" value="{{ facture.reste_a_payer }}" required></div>
+          <div class="col-6"><select name="method" class="form-select form-select-sm"><option value="">Mode...</option><option>Virement</option><option>Chèque</option><option>Espèces</option><option>Carte</option></select></div>
+          <div class="col-6"><input name="reference" class="form-control form-select-sm form-control-sm" placeholder="Réf."></div>
+          <div class="col-12"><button class="btn btn-sm btn-primary w-100"><i class="bi bi-plus-lg"></i> Enregistrer un paiement</button></div>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if user.role.value in ("admin", "manager", "accountant") %}
+    <div class="card"><div class="card-body">
+      <form method="post" action="/factures/{{ facture.id }}/status" class="d-flex gap-2 align-items-center">
+        <label class="small mb-0">Statut :</label>
+        <select class="form-select form-select-sm" name="status">
+          <option value="brouillon" {% if facture.status.value == "brouillon" %}selected{% endif %}>Brouillon</option>
+          <option value="envoyee" {% if facture.status.value == "envoyee" %}selected{% endif %}>Envoyée</option>
+          <option value="en_retard" {% if facture.status.value == "en_retard" %}selected{% endif %}>En retard</option>
+          <option value="annulee" {% if facture.status.value == "annulee" %}selected{% endif %}>Annulée</option>
+        </select>
+        <button class="btn btn-sm btn-primary">OK</button>
+      </form>
+    </div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

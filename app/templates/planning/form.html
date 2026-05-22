@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if intervention else "Nouvelle" }} intervention{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{{ "Modifier l'intervention" if intervention else "Nouvelle intervention" }}</h1>
+<form method="post" class="card card-body" action="{{ '/interventions/' ~ intervention.id ~ '/edit' if intervention else '/interventions/new' }}">
+  <div class="row g-3">
+    <div class="col-md-8"><label class="form-label">Titre *</label><input class="form-control" name="title" required value="{{ intervention.title if intervention else '' }}"></div>
+    <div class="col-md-4"><label class="form-label">Statut</label>
+      <select class="form-select" name="status">
+        {% for s in statuses %}<option value="{{ s.value }}" {% if intervention and intervention.status == s %}selected{% endif %}>{{ s.value | status_label }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-12"><label class="form-label">Chantier *</label>
+      <select class="form-select" name="chantier_id" required>
+        <option value="">— Sélectionner —</option>
+        {% for c in chantiers %}<option value="{{ c.id }}"
+          {% if intervention and intervention.chantier_id == c.id %}selected{% endif %}
+          {% if not intervention and selected_chantier == c.id %}selected{% endif %}>{{ c.reference }} — {{ c.name }}</option>{% endfor %}
+      </select>
+    </div>
+
+    <div class="col-md-6"><label class="form-label">Début *</label>
+      <input type="datetime-local" class="form-control" name="start_dt" required
+        value="{{ intervention.start_dt.strftime('%Y-%m-%dT%H:%M') if intervention else default_start }}">
+    </div>
+    <div class="col-md-6"><label class="form-label">Fin *</label>
+      <input type="datetime-local" class="form-control" name="end_dt" required
+        value="{{ intervention.end_dt.strftime('%Y-%m-%dT%H:%M') if intervention else default_start }}">
+    </div>
+
+    <div class="col-md-6"><label class="form-label">Assigné à (interne)</label>
+      <select class="form-select" name="assignee_id">
+        <option value="">— Aucun —</option>
+        {% for u in users %}<option value="{{ u.id }}" {% if intervention and intervention.assignee_id == u.id %}selected{% endif %}>{{ u.full_name }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-6"><label class="form-label">Artisan / sous-traitant externe</label>
+      <select class="form-select" name="contact_id">
+        <option value="">— Aucun —</option>
+        {% for c in contacts %}<option value="{{ c.id }}" {% if intervention and intervention.contact_id == c.id %}selected{% endif %}>{{ c.name }} ({{ c.type | status_label }})</option>{% endfor %}
+      </select>
+    </div>
+
+    <div class="col-12"><label class="form-label">Description</label>
+      <textarea class="form-control" name="description" rows="3">{{ intervention.description if intervention else '' }}</textarea>
+    </div>
+  </div>
+  <div class="mt-3"><button class="btn btn-primary">Enregistrer</button>
+  <a class="btn btn-outline-secondary" href="/planning">Annuler</a></div>
+</form>
+{% endblock %}

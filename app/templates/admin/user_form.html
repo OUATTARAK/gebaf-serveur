@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ "Modifier" if target else "Nouvel" }} utilisateur{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3">{{ "Modifier " + target.full_name if target else "Nouvel utilisateur" }}</h1>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<form method="post" class="card card-body" action="{{ '/admin/users/' ~ target.id ~ '/edit' if target else '/admin/users/new' }}">
+  <div class="row g-3">
+    <div class="col-md-6"><label class="form-label">Nom complet *</label><input class="form-control" name="full_name" required value="{{ target.full_name if target else '' }}"></div>
+    <div class="col-md-6"><label class="form-label">Email *</label><input type="email" class="form-control" name="email" required value="{{ target.email if target else '' }}"></div>
+    <div class="col-md-4"><label class="form-label">Rôle</label>
+      <select class="form-select" name="role">
+        {% for r in roles %}<option value="{{ r.value }}" {% if target and target.role == r %}selected{% endif %}>{{ r.value | status_label }}</option>{% endfor %}
+      </select>
+    </div>
+    <div class="col-md-4"><label class="form-label">Mot de passe {% if not target %}*{% else %}<small>(laisser vide pour ne pas changer)</small>{% endif %}</label>
+      <input type="password" class="form-control" name="password" {% if not target %}required{% endif %}>
+    </div>
+    {% if target %}
+    <div class="col-md-4"><label class="form-label">Statut</label>
+      <div class="form-check mt-2"><input class="form-check-input" type="checkbox" name="active" value="1" id="active" {% if target.active %}checked{% endif %}>
+        <label class="form-check-label" for="active">Compte actif</label></div>
+    </div>
+    {% endif %}
+  </div>
+  <div class="mt-3"><button class="btn btn-primary">Enregistrer</button>
+  <a class="btn btn-outline-secondary" href="/admin/users">Annuler</a></div>
+</form>
+
+<div class="card mt-3"><div class="card-body small text-muted">
+  <h6 class="mb-2">Rôles disponibles</h6>
+  <ul class="mb-0">
+    <li><strong>Administrateur</strong> : accès complet, gestion utilisateurs et audit</li>
+    <li><strong>Coordinateur (manager)</strong> : chantiers, devis, clients, contacts, interventions, factures, dépenses</li>
+    <li><strong>Comptable (accountant)</strong> : factures, paiements, dépenses, rapports</li>
+    <li><strong>Ouvrier (worker)</strong> : saisie d'heures, photos, dépenses (les siennes)</li>
+    <li><strong>Lecture seule (viewer)</strong> : consultation uniquement</li>
+  </ul>
+</div></div>
+{% endblock %}

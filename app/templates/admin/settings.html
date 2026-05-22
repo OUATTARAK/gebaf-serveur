@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Paramètres · Admin{% endblock %}
+{% block topbar %}Paramètres{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="h3">Paramètres de l'application</h1>
+    <div class="subtitle">Informations de l'entreprise (utilisées sur les PDF) et clé API pour l'extraction intelligente.</div>
+  </div>
+</div>
+
+<form method="post" action="/admin/settings">
+<div class="row g-3">
+
+  <div class="col-lg-7">
+    <div class="card">
+      <div class="card-header"><span><i class="bi bi-building"></i> Identité de l'entreprise</span>
+        <span class="small text-muted">Apparaît sur les devis et factures</span>
+      </div>
+      <div class="card-body row g-3">
+        <div class="col-md-12"><label class="form-label">Raison sociale *</label>
+          <input class="form-control" name="company_name" value="{{ company.name }}" required>
+        </div>
+        <div class="col-md-12"><label class="form-label">Adresse</label>
+          <textarea class="form-control" name="company_address" rows="3" placeholder="Numéro et rue&#10;Code postal et ville">{{ company.address }}</textarea>
+        </div>
+        <div class="col-md-6"><label class="form-label">Téléphone</label>
+          <input class="form-control" name="company_phone" value="{{ company.phone }}">
+        </div>
+        <div class="col-md-6"><label class="form-label">Email</label>
+          <input type="email" class="form-control" name="company_email" value="{{ company.email }}">
+        </div>
+        <div class="col-md-6"><label class="form-label">SIRET / RCCM</label>
+          <input class="form-control" name="company_siret" value="{{ company.siret }}">
+        </div>
+        <div class="col-md-6"><label class="form-label">RCS / Registre</label>
+          <input class="form-control" name="company_rcs" value="{{ company.rcs }}">
+        </div>
+        <div class="col-md-6"><label class="form-label">N° TVA intracom.</label>
+          <input class="form-control" name="company_tva_intra" value="{{ company.tva_intra }}">
+        </div>
+        <div class="col-md-6"><label class="form-label">IBAN / Coordonnées bancaires</label>
+          <input class="form-control" name="company_iban" value="{{ company.iban }}">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-lg-5">
+    <div class="card">
+      <div class="card-header"><span><i class="bi bi-stars"></i> Extraction IA (Anthropic Claude)</span>
+        {% if has_key %}<span class="badge bg-success">Activée</span>{% else %}<span class="badge bg-secondary">Désactivée</span>{% endif %}
+      </div>
+      <div class="card-body">
+        <p class="small text-muted mb-3">
+          Permet d'extraire automatiquement les informations des factures fournisseurs (même scannées) et autres documents.
+          Crée une clé sur <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>.
+        </p>
+
+        {% if has_key %}
+        <div class="alert alert-success small py-2">
+          <i class="bi bi-check-circle"></i> Clé configurée : <code>{{ api_key_masked }}</code>
+        </div>
+        {% endif %}
+
+        <label class="form-label">{% if has_key %}Remplacer la clé{% else %}Coller la clé{% endif %}</label>
+        <input type="password" class="form-control mb-2" name="anthropic_api_key"
+               placeholder="sk-ant-..." autocomplete="off">
+        <div class="form-text mb-3">Format <code>sk-ant-...</code>. Stocké en BDD locale.</div>
+
+        {% if has_key %}
+        <div class="form-check mb-3">
+          <input class="form-check-input" type="checkbox" name="clear_anthropic_key" value="1" id="clear-key">
+          <label class="form-check-label small" for="clear-key">Supprimer la clé actuelle</label>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    {% if has_key %}
+    <div class="card mt-3">
+      <div class="card-body">
+        <button class="btn btn-outline-primary w-100" type="button"
+          onclick="document.getElementById('test-form').submit()">
+          <i class="bi bi-lightning-charge"></i> Tester la connexion Claude
+        </button>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+  <div class="col-12">
+    <button class="btn btn-accent" type="submit"><i class="bi bi-check-lg"></i> Enregistrer les paramètres</button>
+  </div>
+</div>
+</form>
+
+{% if has_key %}
+<form id="test-form" method="post" action="/admin/settings/test-claude" style="display:none"></form>
+{% endif %}
+{% endblock %}
